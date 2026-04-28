@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import json; json.load\\(open\\('/c/Users/Zack/Documents/GitHub/tipofmydih/notebooks/train.ipynb'\\)\\); print\\('valid'\\)\")",
+      "PowerShell(python -c \"import json; json.load\\(open\\(r'C:\\\\Users\\\\Zack\\\\Documents\\\\GitHub\\\\tipofmydih\\\\notebooks\\\\train.ipynb'\\)\\); print\\('valid'\\)\")"
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+name: tipofmyjoystick
+display_name: Tip of My Joystick
+description: Identify video games from vague descriptions
+subreddit: tipofmyjoystick
+hf_repo: reddibase/tipofmyjoystick
+
+scraper:
+  after: 0          # full archive
+  request_delay: 1.0
+
+classifier:
+  base_model: distilbert-base-uncased
+  # Bootstrap label strategy: any post WITH a flair is solved (the flair text
+  # is the game name, i.e. the answer); any post with NO flair is unsolved.
+  # The flair value is also used as the ground-truth answer during bootstrapping.
+  flair_strategy: any_flair_is_solved
+  confidence_threshold: 0.80   # minimum score to include a pair in the dataset
+
+identification_model:
+  base_encoder: sentence-transformers/all-MiniLM-L6-v2
+  top_k: 10

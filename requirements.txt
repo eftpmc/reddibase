@@ -1,0 +1,24 @@
+# Scraper
+httpx>=0.27
+
+# Fuzzy matching (answer comment detection)
+rapidfuzz>=3.0
+
+# ML
+sentence-transformers>=3.0
+faiss-cpu>=1.8
+transformers>=4.40
+torch>=2.2
+datasets>=2.19
+
+# API
+fastapi>=0.111
+uvicorn[standard]>=0.29
+
+# Database
+asyncpg>=0.29
+sqlalchemy[asyncio]>=2.0
+
+# Utilities
+pyyaml>=6.0
+tqdm>=4.66
