@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(python3 -c \"import json; json.load\\(open\\('/c/Users/Zack/Documents/GitHub/tipofmydih/notebooks/train.ipynb'\\)\\); print\\('valid'\\)\")",
-      "PowerShell(python -c \"import json; json.load\\(open\\(r'C:\\\\Users\\\\Zack\\\\Documents\\\\GitHub\\\\tipofmydih\\\\notebooks\\\\train.ipynb'\\)\\); print\\('valid'\\)\")"
+      "PowerShell(python -c \"import json; json.load\\(open\\(r'C:\\\\Users\\\\Zack\\\\Documents\\\\GitHub\\\\tipofmydih\\\\notebooks\\\\train.ipynb'\\)\\); print\\('valid'\\)\")",
+      "Bash(python -c \"import json; nb=json.load\\(open\\('notebooks/train.ipynb','r',encoding='utf-8'\\)\\); [print\\(i, c['id']\\) for i,c in enumerate\\(nb['cells']\\)]\")",
+      "Bash(python -c ' *)",
+      "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=tipofmyjoystick&limit=3\")",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=tipofmyjoystick&limit=3&sort=created_utc&sort_type=asc\" -w \"\\\\nHTTP_STATUS:%{http_code}\")",
+      "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=tipofmyjoystick&limit=3&sort=asc&sort_type=created_utc\" -w \"\\\\nHTTP_STATUS:%{http_code}\")",
+      "Bash(python -c \"import nbformat; print\\(nbformat.__version__\\)\")",
+      "Bash(pip install *)"
     ]
   }
 }

@@ -116,8 +116,8 @@ class ArcticShiftScraper:
             "after": after_ts,
             "before": self.before,
             "limit": _POST_BATCH_SIZE,
-            "sort": "created_utc",
-            "sort_type": "asc",
+            "sort": "asc",
+            "sort_type": "created_utc",
         }
         data = await self._get(f"{_BASE_URL}/posts/search", params)
         return [_parse_post(raw) for raw in data.get("data", [])]
@@ -129,8 +129,8 @@ class ArcticShiftScraper:
             "link_id": f"t3_{post_id}",
             "after": after_ts,
             "limit": _COMMENT_BATCH_SIZE,
-            "sort": "created_utc",
-            "sort_type": "asc",
+            "sort": "asc",
+            "sort_type": "created_utc",
         }
         data = await self._get(f"{_BASE_URL}/comments/search", params)
         return [_parse_comment(post_id, raw) for raw in data.get("data", [])]
