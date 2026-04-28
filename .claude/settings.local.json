@@ -10,7 +10,9 @@
       "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=tipofmyjoystick&limit=3&sort=created_utc&sort_type=asc\" -w \"\\\\nHTTP_STATUS:%{http_code}\")",
       "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=tipofmyjoystick&limit=3&sort=asc&sort_type=created_utc\" -w \"\\\\nHTTP_STATUS:%{http_code}\")",
       "Bash(python -c \"import nbformat; print\\(nbformat.__version__\\)\")",
-      "Bash(pip install *)"
+      "Bash(pip install *)",
+      "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=tipofmyjoystick&after=0&before=1777415830&limit=100&sort=asc&sort_type=created_utc\")",
+      "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=tipofmyjoystick&limit=3&sort=asc&sort_type=created_utc\" -w \"\\\\nSTATUS:%{http_code}\")"
     ]
   }
 }

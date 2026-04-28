@@ -113,12 +113,13 @@ class ArcticShiftScraper:
     async def _fetch_post_page(self, after_ts: int) -> list[Post]:
         params: dict[str, Any] = {
             "subreddit": self.subreddit,
-            "after": after_ts,
             "before": self.before,
             "limit": _POST_BATCH_SIZE,
             "sort": "asc",
             "sort_type": "created_utc",
         }
+        if after_ts:
+            params["after"] = after_ts
         data = await self._get(f"{_BASE_URL}/posts/search", params)
         return [_parse_post(raw) for raw in data.get("data", [])]
 
@@ -127,11 +128,12 @@ class ArcticShiftScraper:
     ) -> list[Comment]:
         params: dict[str, Any] = {
             "link_id": f"t3_{post_id}",
-            "after": after_ts,
             "limit": _COMMENT_BATCH_SIZE,
             "sort": "asc",
             "sort_type": "created_utc",
         }
+        if after_ts:
+            params["after"] = after_ts
         data = await self._get(f"{_BASE_URL}/comments/search", params)
         return [_parse_comment(post_id, raw) for raw in data.get("data", [])]
 
