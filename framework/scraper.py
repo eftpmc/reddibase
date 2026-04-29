@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 _BASE_URL = "https://arctic-shift.photon-reddit.com/api"
 _POST_BATCH_SIZE = 100      # max per page for posts endpoint
 _COMMENT_BATCH_SIZE = 100   # max per page for comments endpoint
-_COMMENT_CONCURRENCY = 8    # parallel comment-fetch tasks
+_COMMENT_CONCURRENCY = 4    # parallel comment-fetch tasks
 _MAX_BACKOFF = 60.0
 
 
