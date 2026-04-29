@@ -1,7 +1,7 @@
 import type { GetServerSideProps } from 'next'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { ArrowLeft, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ExternalLink } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { ArrowLeft, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ExternalLink, Search } from 'lucide-react'
 import Layout from '../components/Layout'
 
 interface Model {
@@ -41,6 +41,12 @@ interface DatasetPage {
   items: DatasetItem[]
 }
 
+interface FilterOption<T extends string | number> {
+  label: string
+  value: T
+  detail?: string
+}
+
 function redditUrl(subreddit: string, postId: string) {
   return `https://reddit.com/r/${subreddit}/comments/${postId}/`
 }
@@ -55,6 +61,35 @@ function displayAnswer(flair: string | null, answer: string): string {
   return first.length > 72 ? first.slice(0, 72) + '…' : first
 }
 
+const MIN_CONFIDENCE_OPTIONS: FilterOption<number>[] = [
+  { label: 'Any confidence', value: 0 },
+  { label: '50%+', value: 0.5 },
+  { label: '60%+', value: 0.6 },
+  { label: '70%+', value: 0.7 },
+  { label: '75%+', value: 0.75 },
+  { label: '80%+', value: 0.8 },
+  { label: '85%+', value: 0.85 },
+  { label: '90%+', value: 0.9 },
+  { label: '95%+', value: 0.95 },
+]
+
+const MAX_CONFIDENCE_OPTIONS: FilterOption<number>[] = [
+  { label: 'Up to 60%', value: 0.6 },
+  { label: 'Up to 70%', value: 0.7 },
+  { label: 'Up to 75%', value: 0.75 },
+  { label: 'Up to 80%', value: 0.8 },
+  { label: 'Up to 85%', value: 0.85 },
+  { label: 'Up to 90%', value: 0.9 },
+  { label: 'Up to 95%', value: 0.95 },
+  { label: 'Up to 100%', value: 1 },
+]
+
+const SOURCE_OPTIONS: FilterOption<string>[] = [
+  { label: 'All sources', value: 'all', detail: 'Flaired and classifier-recovered pairs' },
+  { label: 'Flair', value: 'flaired', detail: 'Pairs confirmed by post flair' },
+  { label: 'Classifier', value: 'classifier', detail: 'Pairs recovered by classifier inference' },
+]
+
 export default function ModelPage({ model }: { model: Model }) {
   const [stats, setStats] = useState<Stats | null>(null)
 
@@ -65,7 +100,7 @@ export default function ModelPage({ model }: { model: Model }) {
   }, [model.id])
 
   return (
-    <Layout title={`${model.display_name} — Dataset`}>
+    <Layout title={model.display_name}>
       <div className="max-w-4xl mx-auto px-6 py-8">
 
         {/* Back + meta row */}
@@ -98,7 +133,7 @@ export default function ModelPage({ model }: { model: Model }) {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold mb-1">{model.display_name} — Dataset</h1>
+          <h1 className="text-2xl font-bold mb-1">{model.display_name}</h1>
           {model.description && (
             <p className="text-base-content/40 text-sm">{model.description}</p>
           )}
@@ -139,6 +174,78 @@ export default function ModelPage({ model }: { model: Model }) {
   )
 }
 
+function FilterDropdown<T extends string | number>({
+  id,
+  label,
+  value,
+  options,
+  open,
+  onOpen,
+  onChange,
+}: {
+  id: string
+  label: string
+  value: T
+  options: FilterOption<T>[]
+  open: boolean
+  onOpen: () => void
+  onChange: (value: T) => void
+}) {
+  const active = options.find(option => option.value === value)
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="btn btn-xs btn-ghost gap-1.5 border border-base-300 bg-base-100 px-2.5"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={`${id}-menu`}
+      >
+        <span className="text-base-content/40">{label}</span>
+        <span>{active?.label}</span>
+        <ChevronDown size={12} className="text-base-content/40" />
+      </button>
+
+      {open && (
+        <div
+          id={`${id}-menu`}
+          className="absolute left-0 top-8 z-20 w-64 overflow-hidden rounded-lg border border-base-300 bg-base-100 shadow-xl"
+          role="listbox"
+        >
+          <div className="max-h-72 overflow-y-auto p-1">
+            {options.map(option => (
+              <button
+                key={String(option.value)}
+                type="button"
+                onClick={() => onChange(option.value)}
+                className={`flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${
+                  option.value === value
+                    ? 'bg-primary/10 text-primary'
+                    : 'hover:bg-base-200 text-base-content'
+                }`}
+                role="option"
+                aria-selected={option.value === value}
+              >
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center">
+                  {option.value === value && <Check size={15} />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{option.label}</span>
+                  {option.detail && (
+                    <span className="mt-0.5 block text-xs text-base-content/45">{option.detail}</span>
+                  )}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function DatasetPanel({ modelId }: { modelId: string }) {
   const [data, setData] = useState<DatasetPage | null>(null)
   const [page, setPage] = useState(1)
@@ -149,8 +256,256 @@ function DatasetPanel({ modelId }: { modelId: string }) {
   const [dateTo, setDateTo] = useState('')
   const [source, setSource] = useState('all')
   const [loading, setLoading] = useState(true)
+  const [openFilter, setOpenFilter] = useState<string | null>(null)
+  const filtersRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => { fetchPage(1) }, [])
+
+  useEffect(() => {
+    function closeFilters(event: MouseEvent) {
+      if (!filtersRef.current?.contains(event.target as Node)) {
+        setOpenFilter(null)
+      }
+    }
+    document.addEventListener('mousedown', closeFilters)
+    return () => document.removeEventListener('mousedown', closeFilters)
+  }, [])
+
+  async function fetchPage(p: number) {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({ page: String(p), page_size: '50' })
+      if (q) params.set('q', q)
+      if (minConfidence > 0) params.set('min_confidence', String(minConfidence))
+      if (maxConfidence < 1) params.set('max_confidence', String(maxConfidence))
+      if (source !== 'all') params.set('source', source)
+      if (dateFrom) params.set('date_from', String(Math.floor(new Date(dateFrom).getTime() / 1000)))
+      if (dateTo) params.set('date_to', String(Math.floor(new Date(dateTo + 'T23:59:59').getTime() / 1000)))
+      const res = await fetch(`/api/models/${modelId}/dataset?${params}`)
+      if (res.ok) { setData(await res.json()); setPage(p) }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function applyFilters(e: React.FormEvent) {
+    e.preventDefault()
+    fetchPage(1)
+  }
+
+  function resetFilters() {
+    setQ('')
+    setSource('all')
+    setMinConfidence(0)
+    setMaxConfidence(1)
+    setDateFrom('')
+    setDateTo('')
+  }
+
+  const totalPages = data ? Math.ceil(data.total / data.page_size) : 0
+
+  function pageRange(current: number, total: number): (number | '...')[] {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+    if (current <= 4) return [1, 2, 3, 4, 5, '...', total]
+    if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
+    return [1, '...', current - 1, current, current + 1, '...', total]
+  }
+
+  return (
+    <div>
+      <div className="mb-4">
+        <h2 className="text-xl font-bold tracking-tight">Dataset</h2>
+        <p className="text-sm text-base-content/45">Browse confirmed description and answer pairs.</p>
+      </div>
+
+      <form
+        ref={filtersRef}
+        onSubmit={applyFilters}
+        className="mb-6 rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm"
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-2">
+            <label className="input input-bordered input-sm flex min-w-0 flex-1 items-center gap-2 bg-base-100">
+              <Search size={14} className="shrink-0 text-base-content/35" />
+              <input
+                type="text"
+                placeholder="Search descriptions and answers..."
+                value={q}
+                onChange={e => setQ(e.target.value)}
+                className="min-w-0 flex-1"
+              />
+            </label>
+            <button type="submit" className="btn btn-sm btn-primary shrink-0">Apply</button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterDropdown
+              id="source"
+              label="Source"
+              value={source}
+              options={SOURCE_OPTIONS}
+              open={openFilter === 'source'}
+              onOpen={() => setOpenFilter(openFilter === 'source' ? null : 'source')}
+              onChange={value => {
+                setSource(value)
+                setOpenFilter(null)
+              }}
+            />
+            <FilterDropdown
+              id="min-confidence"
+              label="Min"
+              value={minConfidence}
+              options={MIN_CONFIDENCE_OPTIONS}
+              open={openFilter === 'min-confidence'}
+              onOpen={() => setOpenFilter(openFilter === 'min-confidence' ? null : 'min-confidence')}
+              onChange={value => {
+                setMinConfidence(value)
+                setOpenFilter(null)
+              }}
+            />
+            <FilterDropdown
+              id="max-confidence"
+              label="Max"
+              value={maxConfidence}
+              options={MAX_CONFIDENCE_OPTIONS}
+              open={openFilter === 'max-confidence'}
+              onOpen={() => setOpenFilter(openFilter === 'max-confidence' ? null : 'max-confidence')}
+              onChange={value => {
+                setMaxConfidence(value)
+                setOpenFilter(null)
+              }}
+            />
+
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1 sm:justify-end">
+              <span className="px-1 text-xs text-base-content/35">Date</span>
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input input-bordered input-xs w-32 bg-base-100" aria-label="Date from" />
+              <span className="text-xs text-base-content/30">to</span>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input input-bordered input-xs w-32 bg-base-100" aria-label="Date to" />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between border-t border-base-300 pt-2">
+            <button type="button" onClick={resetFilters} className="btn btn-xs btn-ghost text-base-content/45">
+              Reset
+            </button>
+            <div className="flex gap-1">
+              <a href={`/api/models/${modelId}/dataset/download?fmt=json`} className="btn btn-xs btn-ghost text-base-content/45 hover:text-base-content">JSON</a>
+              <a href={`/api/models/${modelId}/dataset/download?fmt=csv`} className="btn btn-xs btn-ghost text-base-content/45 hover:text-base-content">CSV</a>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      {!data && loading && (
+        <div className="flex justify-center py-20">
+          <span className="loading loading-spinner loading-lg opacity-40" />
+        </div>
+      )}
+
+      {data && (
+        <>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs text-base-content/40 tabular-nums">
+              {data.total.toLocaleString()} pairs
+              {loading && <span className="loading loading-dots loading-xs ml-2 opacity-40" />}
+            </p>
+            {totalPages > 1 && (
+              <p className="text-xs text-base-content/40 tabular-nums">Page {page} of {totalPages}</p>
+            )}
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-base-300">
+            <table className="table table-sm">
+              <thead className="bg-base-200">
+                <tr>
+                  <th className="w-48">Answer</th>
+                  <th>Description</th>
+                  <th className="w-24 text-center">Confidence</th>
+                  <th className="w-24">Date</th>
+                  <th className="w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map(item => (
+                  <tr key={item.post_id} className="hover border-base-300">
+                    <td>
+                      <span className="font-medium text-sm leading-snug">{displayAnswer(item.flair, item.answer)}</span>
+                    </td>
+                    <td>
+                      <p className="line-clamp-2 text-base-content/50 text-xs leading-relaxed">{item.description}</p>
+                    </td>
+                    <td className="text-center">
+                      <div className={`badge badge-sm tabular-nums badge-outline ${item.confidence >= 0.9 ? 'badge-success' : 'badge-warning'}`}>
+                        {(item.confidence * 100).toFixed(0)}%
+                      </div>
+                    </td>
+                    <td className="text-xs text-base-content/40">
+                      {item.created_utc ? formatDate(item.created_utc) : '—'}
+                    </td>
+                    <td>
+                      <a
+                        href={redditUrl(item.subreddit, item.post_id)}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-base-content/30 hover:text-base-content transition-colors"
+                        title="View on Reddit"
+                      >
+                        <ExternalLink size={13} />
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-1 mt-6 flex-wrap">
+              <button className="btn btn-sm btn-ghost btn-square" onClick={() => fetchPage(1)} disabled={page <= 1 || loading}><ChevronsLeft size={14} /></button>
+              <button className="btn btn-sm btn-ghost btn-square" onClick={() => fetchPage(page - 1)} disabled={page <= 1 || loading}><ChevronLeft size={14} /></button>
+              {pageRange(page, totalPages).map((p, i) =>
+                p === '...'
+                  ? <span key={`ellipsis-${i}`} className="px-1 text-sm text-base-content/30">...</span>
+                  : <button
+                      key={p}
+                      onClick={() => fetchPage(p as number)}
+                      disabled={loading}
+                      className={`btn btn-sm btn-square tabular-nums ${page === p ? 'btn-primary' : 'btn-ghost'}`}
+                    >{p}</button>
+              )}
+              <button className="btn btn-sm btn-ghost btn-square" onClick={() => fetchPage(page + 1)} disabled={page >= totalPages || loading}><ChevronRight size={14} /></button>
+              <button className="btn btn-sm btn-ghost btn-square" onClick={() => fetchPage(totalPages)} disabled={page >= totalPages || loading}><ChevronsRight size={14} /></button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+function LegacyDatasetPanel({ modelId }: { modelId: string }) {
+  const [data, setData] = useState<DatasetPage | null>(null)
+  const [page, setPage] = useState(1)
+  const [q, setQ] = useState('')
+  const [minConfidence, setMinConfidence] = useState(0)
+  const [maxConfidence, setMaxConfidence] = useState(1)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [source, setSource] = useState('all')
+  const [loading, setLoading] = useState(true)
+  const [openFilter, setOpenFilter] = useState<string | null>(null)
+  const filtersRef = useRef<HTMLFormElement>(null)
+
+  useEffect(() => { fetchPage(1) }, [])
+
+  useEffect(() => {
+    function closeFilters(event: MouseEvent) {
+      if (!filtersRef.current?.contains(event.target as Node)) {
+        setOpenFilter(null)
+      }
+    }
+    document.addEventListener('mousedown', closeFilters)
+    return () => document.removeEventListener('mousedown', closeFilters)
+  }, [])
 
   async function fetchPage(p: number) {
     setLoading(true)
@@ -185,7 +540,16 @@ function DatasetPanel({ modelId }: { modelId: string }) {
 
   return (
     <div>
-      <form onSubmit={applyFilters} className="flex flex-col gap-2 mb-6 p-4 bg-base-200 rounded-xl border border-base-300">
+      <div className="mb-4">
+        <h2 className="text-xl font-bold tracking-tight">Dataset</h2>
+        <p className="text-sm text-base-content/45">Browse confirmed description and answer pairs.</p>
+      </div>
+
+      <form
+        ref={filtersRef}
+        onSubmit={applyFilters}
+        className="mb-6 rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm"
+      >
         {/* Row 1: search */}
         <div className="flex gap-2">
           <input

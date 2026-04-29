@@ -3,7 +3,7 @@ display_name: Tip of My Joystick
 description: Identify games from vague descriptions, sourced from r/tipofmyjoystick.
 subreddit: tipofmyjoystick
 hf_repo: eftpmc/tipofmyjoystick-identification
-classifier_repo: eftpmc/reddibase-solved-classifier
+classifier_repo: eftpmc/reddibase-classifier
 
 scraper:
   after: 0

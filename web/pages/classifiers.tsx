@@ -21,7 +21,7 @@ export default function ClassifiersPage({ classifiers }: { classifiers: Classifi
         <div className="mb-10">
           <h1 className="text-3xl font-bold tracking-tight mb-2">Classifiers</h1>
           <p className="text-base-content/50">
-            Solved-thread classifiers that label Reddit posts for training. A single classifier can serve multiple identification models.
+            reddibase-classifier labels Reddit posts for training. A single classifier can serve multiple identification models.
           </p>
         </div>
 
@@ -53,7 +53,7 @@ export default function ClassifiersPage({ classifiers }: { classifiers: Classifi
                     <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-base-300">
                       <div className="flex items-center gap-1.5 text-sm text-base-content/50">
                         <Cpu size={13} className="text-base-content/30" />
-                        <span>Classifier</span>
+                        <span>reddibase-classifier</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-sm text-base-content/50">
                         <Layers size={13} className="text-base-content/30" />

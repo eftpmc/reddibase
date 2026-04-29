@@ -1,6 +1,6 @@
 import type { GetServerSideProps } from 'next'
-import { useRef, useState } from 'react'
-import { Search, ExternalLink } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowRight, Cpu, Database, ExternalLink, Hash, Layers, Search, UploadCloud } from 'lucide-react'
 import Layout from '../components/Layout'
 
 interface Model {
@@ -8,185 +8,166 @@ interface Model {
   display_name: string
   description: string
   subreddit: string
+  hf_repo: string
+  classifier_repo: string
   confirmed_pairs: number
 }
 
-interface SearchResult {
-  post_id: string
-  subreddit: string
-  description: string
-  answer: string
-  flair: string | null
-  similarity: number
-}
-
-const EXAMPLES: Record<string, string[]> = {
-  tipofmyjoystick: [
-    'old DOS game where you play as a knight collecting gems',
-    'puzzle game where you push blocks to trap monsters',
-    'space shooter defending a planet from waves of aliens',
-  ],
-}
-
-function redditUrl(subreddit: string, postId: string) {
-  return `https://reddit.com/r/${subreddit}/comments/${postId}/`
-}
-
-function displayAnswer(flair: string | null, answer: string): string {
-  if (flair) return flair
-  const first = answer.split(/[\n.!?]/)[0].trim()
-  return first.length > 72 ? first.slice(0, 72) + '…' : first
-}
-
 export default function Home({ models }: { models: Model[] }) {
-  const [query, setQuery] = useState('')
-  const [selectedModel, setSelectedModel] = useState(models[0]?.id ?? '')
-  const [results, setResults] = useState<SearchResult[]>([])
-  const [loading, setLoading] = useState(false)
-  const [searched, setSearched] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const active = models.find(m => m.id === selectedModel)
-  const examples = EXAMPLES[selectedModel] ?? []
-
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
-    const q = query.trim()
-    if (!q || !selectedModel) return
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/models/${selectedModel}/search?q=${encodeURIComponent(q)}&top_k=10`)
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        setError(err.detail || `Error ${res.status}`)
-        setResults([])
-      } else {
-        setResults(await res.json())
-      }
-    } catch {
-      setError('Could not reach the API.')
-      setResults([])
-    } finally {
-      setLoading(false)
-      setSearched(true)
-    }
-  }
-
-  function useExample(q: string) {
-    setQuery(q)
-    inputRef.current?.focus()
-  }
+  const classifierCount = new Set(models.map(m => m.classifier_repo).filter(Boolean)).size
+  const pairCount = models.reduce((sum, m) => sum + (m.confirmed_pairs || 0), 0)
 
   return (
     <Layout>
-      <div className="max-w-2xl mx-auto px-6 py-16">
-
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold tracking-tight mb-2">Can't remember it?</h1>
-          <p className="text-base-content/50 text-lg">Describe it. We'll find it.</p>
-        </div>
-
-        {models.length === 0 ? (
-          <p className="text-center text-base-content/30">No models available yet.</p>
-        ) : (
-          <>
-            <form onSubmit={handleSearch} className="flex gap-2 mb-4">
-              <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder={active ? `Describe a ${active.display_name.toLowerCase()}…` : 'Describe what you\'re looking for…'}
-                className="input input-bordered flex-1"
-                autoFocus
-              />
-              <button type="submit" disabled={loading || !query.trim()} className="btn btn-primary px-5">
-                {loading ? <span className="loading loading-spinner loading-sm" /> : <Search size={16} />}
-              </button>
-            </form>
-
-            {models.length > 1 && (
-              <div className="flex flex-wrap gap-2 mb-6">
-                {models.map(m => (
-                  <button
-                    key={m.id}
-                    onClick={() => setSelectedModel(m.id)}
-                    className={`btn btn-sm rounded-full ${selectedModel === m.id ? 'btn-primary' : 'btn-ghost border border-base-300'}`}
-                  >
-                    {m.display_name}
-                  </button>
-                ))}
+      <div className="max-w-5xl mx-auto px-6 py-12">
+        <section className="pb-12">
+          <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl">
+              <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-wider text-base-content/40">
+                <Search size={13} /> Search first
               </div>
-            )}
+              <h1 className="text-4xl font-bold tracking-tight mb-3">Find the thing you half remember</h1>
+              <p className="text-lg text-base-content/55 leading-relaxed">
+                Search identification models trained from Reddit threads where someone described a forgotten game, object, bug, or story and the community solved it.
+              </p>
+              <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-base-content/45">
+                <span className="tabular-nums">{models.length.toLocaleString()} models</span>
+                <span className="text-base-content/20">/</span>
+                <span className="tabular-nums">{pairCount.toLocaleString()} confirmed pairs</span>
+                <span className="text-base-content/20">/</span>
+                <span className="tabular-nums">{classifierCount.toLocaleString()} classifiers</span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/search" className="btn btn-primary gap-2">
+                <Search size={16} /> Search
+              </Link>
+              <Link href="/models" className="btn btn-ghost gap-2 border border-base-300">
+                Models <ArrowRight size={16} />
+              </Link>
+            </div>
+          </div>
+        </section>
 
-            {error && <div className="alert alert-error mb-4"><span>{error}</span></div>}
+        <section className="border-y border-base-300 py-12">
+          <div className="mb-5">
+            <h2 className="text-xl font-bold tracking-tight">How it works</h2>
+            <p className="max-w-2xl text-sm text-base-content/45">
+              Reddibase separates model creation from search. Contributors build model artifacts in notebooks; the app reads approved configs and serves fast lookup.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="rounded-lg border border-base-300 bg-base-200 p-4">
+              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-md bg-base-100 text-base-content/60">
+                <Database size={16} />
+              </div>
+              <h3 className="font-semibold mb-1">Collect threads</h3>
+              <p className="text-sm text-base-content/50 leading-relaxed">Scrape posts and comments from communities built around identifying half-remembered things.</p>
+            </div>
+            <div className="rounded-lg border border-base-300 bg-base-200 p-4">
+              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-md bg-base-100 text-base-content/60">
+                <Cpu size={16} />
+              </div>
+              <h3 className="font-semibold mb-1">Recover answers</h3>
+              <p className="text-sm text-base-content/50 leading-relaxed">Run classifier inference to find confirmed answer comments and produce description-answer pairs.</p>
+            </div>
+            <div className="rounded-lg border border-base-300 bg-base-200 p-4">
+              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-md bg-base-100 text-base-content/60">
+                <UploadCloud size={16} />
+              </div>
+              <h3 className="font-semibold mb-1">Ship a model</h3>
+              <p className="text-sm text-base-content/50 leading-relaxed">Train a retrieval index, publish artifacts to Hugging Face, and add the model config by PR.</p>
+            </div>
+          </div>
+        </section>
 
-            {results.length > 0 && (
-              <div className="flex flex-col gap-3 mt-6">
-                {results.map((r, i) => (
-                  <div key={r.post_id} className="card bg-base-200 border border-base-300 hover:border-base-content/20 transition-colors">
-                    <div className="card-body p-5 gap-2">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs font-mono text-base-content/20 w-4 text-right shrink-0">{i + 1}</span>
-                          <p className="font-semibold leading-snug">{displayAnswer(r.flair, r.answer)}</p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <div className={`badge badge-sm tabular-nums badge-outline ${r.similarity >= 0.8 ? 'badge-primary' : r.similarity >= 0.6 ? 'badge-warning' : 'badge-ghost'}`}>
-                            {(r.similarity * 100).toFixed(0)}%
-                          </div>
-                          <a
-                            href={redditUrl(r.subreddit, r.post_id)}
-                            target="_blank" rel="noopener noreferrer"
-                            className="text-base-content/30 hover:text-base-content transition-colors"
-                            title="View on Reddit"
-                          >
-                            <ExternalLink size={13} />
-                          </a>
-                        </div>
+        <section className="border-b border-base-300 py-12">
+          <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">Model Collection</h2>
+              <p className="text-sm text-base-content/45">Inspect model datasets, artifact metadata, and the communities each model covers.</p>
+            </div>
+            <Link href="/models" className="btn btn-sm btn-ghost gap-1.5">
+              All models <ArrowRight size={13} />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+            <div className="border border-base-300 bg-base-100 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-xs text-base-content/40 uppercase tracking-wider mb-2">
+                <Layers size={13} /> Models
+              </div>
+              <div className="text-2xl font-bold tabular-nums">{models.length.toLocaleString()}</div>
+            </div>
+            <div className="border border-base-300 bg-base-100 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-xs text-base-content/40 uppercase tracking-wider mb-2">
+                <Database size={13} /> Confirmed pairs
+              </div>
+              <div className="text-2xl font-bold tabular-nums">{pairCount.toLocaleString()}</div>
+            </div>
+            <div className="border border-base-300 bg-base-100 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-xs text-base-content/40 uppercase tracking-wider mb-2">
+                <Cpu size={13} /> Classifiers
+              </div>
+              <div className="text-2xl font-bold tabular-nums">{classifierCount.toLocaleString()}</div>
+            </div>
+          </div>
+
+          {models.length === 0 ? (
+            <p className="text-base-content/30">No models registered yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {models.slice(0, 6).map(m => (
+                <div key={m.id} className="card bg-base-200 border border-base-300 hover:border-base-content/20 transition-colors">
+                  <div className="card-body p-5 gap-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-lg leading-tight mb-1">{m.display_name}</h3>
+                        <p className="text-sm text-base-content/50 line-clamp-2">
+                          {m.description || 'Identification model trained on confirmed Reddit threads.'}
+                        </p>
                       </div>
-                      <p className="text-base-content/40 text-sm line-clamp-2 pl-7 leading-relaxed">
-                        {r.description}
-                      </p>
+                      <Link href={`/${m.id}`} className="btn btn-sm btn-primary gap-1.5 shrink-0">
+                        Open <ArrowRight size={13} />
+                      </Link>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-base-300">
+                      <div className="flex items-center gap-1.5 text-sm text-base-content/50">
+                        <Hash size={13} className="text-base-content/30" />
+                        <span>r/{m.subreddit}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-sm text-base-content/50">
+                        <Database size={13} className="text-base-content/30" />
+                        <span className="tabular-nums">{m.confirmed_pairs.toLocaleString()} pairs</span>
+                      </div>
+                      <a
+                        href={`https://huggingface.co/${m.hf_repo}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-auto flex items-center gap-1 text-xs text-base-content/40 hover:text-base-content transition-colors"
+                      >
+                        HF Hub <ExternalLink size={11} />
+                      </a>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {searched && !error && results.length === 0 && !loading && (
-              <div className="text-center py-16 text-base-content/30">
-                <p className="text-lg mb-1">No matches found</p>
-                <p className="text-sm">Try rephrasing or adding more detail</p>
-              </div>
-            )}
-
-            {!searched && examples.length > 0 && (
-              <div className="flex flex-col items-center gap-3 mt-8">
-                <p className="text-xs text-base-content/25 uppercase tracking-widest">Try an example</p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {examples.map(ex => (
-                    <button
-                      key={ex}
-                      onClick={() => useExample(ex)}
-                      className="btn btn-xs btn-ghost text-base-content/40 hover:text-base-content border border-base-300 normal-case"
-                    >
-                      {ex}
-                    </button>
-                  ))}
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
+          )}
+        </section>
 
-            {!searched && active && (
-              <p className="text-center text-xs text-base-content/20 tabular-nums mt-8">
-                {active.confirmed_pairs.toLocaleString()} confirmed pairs · r/{active.subreddit}
-              </p>
-            )}
-          </>
-        )}
+        <section className="pt-10">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">Add a model</h2>
+              <p className="text-sm text-base-content/45">Use the notebook workflow to train artifacts, then submit the generated config.</p>
+            </div>
+            <Link href="/contribute" className="btn btn-sm btn-ghost gap-2 border border-base-300">
+              Contribution flow <ArrowRight size={14} />
+            </Link>
+          </div>
+        </section>
       </div>
     </Layout>
   )

@@ -2,7 +2,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
-import { Cpu, Layers, PanelLeft } from 'lucide-react'
+import { Cpu, GitPullRequest, Layers, PanelLeft, Search } from 'lucide-react'
 import { FaGithub } from 'react-icons/fa'
 import { ReactNode } from 'react'
 
@@ -21,8 +21,10 @@ export default function Layout({ children, title }: { children: ReactNode; title
   const path = router.pathname
 
   const navItems = [
+    { label: 'Search', href: '/search', icon: <Search size={15} /> },
     { label: 'Models', href: '/models', icon: <Layers size={15} /> },
     { label: 'Classifiers', href: '/classifiers', icon: <Cpu size={15} /> },
+    { label: 'Contribute', href: '/contribute', icon: <GitPullRequest size={15} /> },
   ]
 
   return (
@@ -43,6 +45,16 @@ export default function Layout({ children, title }: { children: ReactNode; title
           <Link href="/" className="font-bold text-lg tracking-tight hover:text-primary transition-colors">
             Reddibase
           </Link>
+          <a
+            href="https://github.com/eftpmc/reddibase"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-ghost btn-sm btn-square ml-auto"
+            aria-label="GitHub"
+            title="GitHub"
+          >
+            <FaGithub size={16} />
+          </a>
         </nav>
 
         {open && (
@@ -77,16 +89,6 @@ export default function Layout({ children, title }: { children: ReactNode; title
             </ul>
           </div>
 
-          <div className="p-4 border-t border-base-300 shrink-0">
-            <a
-              href="https://github.com/eftpmc/reddibase"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-base-content/35 hover:text-base-content transition-colors"
-            >
-              <FaGithub size={15} /> GitHub
-            </a>
-          </div>
         </aside>
 
         <main className="flex-1">{children}</main>

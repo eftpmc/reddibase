@@ -6,7 +6,7 @@ An open-source platform for training and hosting identification models built fro
 
 Each model covers one subreddit and ships two things:
 
-1. **Solved classifier** — reads a post's comment thread and determines whether it is confirmed solved and which comment is the answer
+1. **reddibase-classifier** — reads a post's comment thread and determines whether it reached an identified answer and which comment contains it
 2. **Identification model** — takes a vague description and returns ranked matches from the confirmed dataset
 
 Data comes from [Arctic Shift](https://arctic-shift.photon-reddit.com), a full Reddit archive with no 1000-post limit. Flair is used only as a training signal for the classifier — it is never used at inference.
@@ -71,7 +71,7 @@ Starting fresh scrape
 Done. 347,821 posts, 201,455 flaired (57.9%)
 ```
 
-**Section 4 — Classifier training (2–4 hours)**
+**Section 4 — reddibase-classifier training (2–4 hours)**
 Fine-tunes DistilBERT on posts where a flair exists. The flair is the answer (e.g. the game name), so training examples are extracted by matching the flair text against comments. You will see the standard HuggingFace Trainer output:
 
 ```
@@ -83,7 +83,7 @@ Fine-tunes DistilBERT on posts where a flair exists. The flair is the answer (e.
 ```
 
 **Section 5 — Build dataset (30–60 minutes)**
-Runs the trained classifier over all posts, including unflaired ones, to recover solved posts that OP never flaired. Saves pairs above the confidence threshold to `confirmed_pairs.jsonl` on your Drive.
+Runs reddibase-classifier over all posts, including unflaired ones, to recover identified posts that OP never flaired. Saves pairs above the confidence threshold to `confirmed_pairs.jsonl` on your Drive.
 
 ```
 Classifying: 100%|████████| 347,821/347,821
@@ -130,7 +130,7 @@ pip install -r requirements.txt
 uvicorn api.main:app --reload
 ```
 
-The search route works immediately for any model whose trained artifacts are present at `models/{model_id}/identification_model/`. The registry and dataset routes require a PostgreSQL database (schema and setup instructions coming soon).
+The search, registry, and dataset routes work from local configs plus trained artifacts. Model metadata lives in `models/{model_id}/config.yaml`; search and dataset browsing load `index.faiss` and `pairs.jsonl` from the model artifact cache.
 
 To train a model locally instead of on Colab:
 
@@ -138,7 +138,7 @@ To train a model locally instead of on Colab:
 # Scrape (runs overnight, restartable)
 python -m scripts.train_classifier tipofmyjoystick --cache posts.pkl
 
-# Run classifier over all posts → confirmed pairs
+# Run reddibase-classifier over all posts → confirmed pairs
 python -m scripts.build_dataset tipofmyjoystick --cache posts.pkl
 
 # Fine-tune encoder + build FAISS index
@@ -154,7 +154,7 @@ Default settings target an 8 GB VRAM GPU (batch size 8, gradient accumulation 2,
 ```
 framework/
   scraper.py       Arctic Shift API client — streams all posts and comments
-  classifier.py    Solved-post classifier — bootstrap training + inference
+  classifier.py    reddibase-classifier — bootstrap training + inference
   embedder.py      Identification model — fine-tune encoder + FAISS index
   schema.py        Shared dataclasses (Post, Comment, ConfirmedPair)
 
@@ -163,8 +163,8 @@ models/
     config.yaml    Subreddit-specific configuration
 
 scripts/
-  train_classifier.py   CLI for classifier training
-  build_dataset.py      CLI for running classifier → confirmed pairs
+  train_classifier.py   CLI for reddibase-classifier training
+  build_dataset.py      CLI for running reddibase-classifier → confirmed pairs
   train_embedder.py     CLI for encoder fine-tuning + index building
 
 notebooks/

@@ -22,6 +22,7 @@ _BASE_URL = "https://arctic-shift.photon-reddit.com/api"
 _POST_BATCH_SIZE = 100      # max per page for posts endpoint
 _COMMENT_BATCH_SIZE = 100   # max per page for comments endpoint
 _COMMENT_CONCURRENCY = 8    # parallel comment-fetch tasks
+_MAX_BACKOFF = 60.0
 
 
 class ArcticShiftScraper:
@@ -51,7 +52,7 @@ class ArcticShiftScraper:
         after: int = 0,
         before: Optional[int] = None,
         request_delay: float = 1.0,
-        max_retries: int = 5,
+        max_retries: int = 8,
     ) -> None:
         self.subreddit = subreddit
         self.after = after
@@ -173,18 +174,37 @@ class ArcticShiftScraper:
                     retry_after = float(response.headers.get("Retry-After", backoff))
                     logger.warning("Rate limited; sleeping %.1fs", retry_after)
                     await asyncio.sleep(retry_after)
-                    backoff *= 2
+                    backoff = min(backoff * 2, _MAX_BACKOFF)
+                    continue
+
+                if 500 <= response.status_code < 600:
+                    if attempt == self.max_retries - 1:
+                        response.raise_for_status()
+                    logger.warning(
+                        "Server error %d on attempt %d/%d; retrying in %.1fs",
+                        response.status_code,
+                        attempt + 1,
+                        self.max_retries,
+                        backoff,
+                    )
+                    await asyncio.sleep(backoff)
+                    backoff = min(backoff * 2, _MAX_BACKOFF)
                     continue
 
                 response.raise_for_status()
                 return response.json()
 
-            except httpx.TimeoutException:
+            except (httpx.TimeoutException, httpx.NetworkError):
                 if attempt == self.max_retries - 1:
                     raise
-                logger.warning("Timeout on attempt %d/%d; retrying in %.1fs", attempt + 1, self.max_retries, backoff)
+                logger.warning(
+                    "Request failed on attempt %d/%d; retrying in %.1fs",
+                    attempt + 1,
+                    self.max_retries,
+                    backoff,
+                )
                 await asyncio.sleep(backoff)
-                backoff *= 2
+                backoff = min(backoff * 2, _MAX_BACKOFF)
 
         raise RuntimeError(f"Exhausted {self.max_retries} retries for {url}")
 
