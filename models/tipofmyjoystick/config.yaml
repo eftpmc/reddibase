@@ -1,8 +1,9 @@
 name: tipofmyjoystick
-display_name: tipofmyjoystick  # update with a human-friendly name
-description: ""  # one sentence describing what this model identifies
+display_name: Tip of My Joystick
+description: Identify games from vague descriptions, sourced from r/tipofmyjoystick.
 subreddit: tipofmyjoystick
 hf_repo: eftpmc/tipofmyjoystick-identification
+classifier_repo: eftpmc/reddibase-solved-classifier
 
 scraper:
   after: 0

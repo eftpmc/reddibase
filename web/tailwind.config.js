@@ -2,5 +2,8 @@
 module.exports = {
   content: ['./pages/**/*.{ts,tsx}', './components/**/*.{ts,tsx}'],
   theme: { extend: {} },
-  plugins: [],
+  plugins: [require('daisyui')],
+  daisyui: {
+    themes: ['dim'],
+  },
 }

@@ -1,23 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3 -c \"import json; json.load\\(open\\('/c/Users/Zack/Documents/GitHub/tipofmydih/notebooks/train.ipynb'\\)\\); print\\('valid'\\)\")",
-      "PowerShell(python -c \"import json; json.load\\(open\\(r'C:\\\\Users\\\\Zack\\\\Documents\\\\GitHub\\\\tipofmydih\\\\notebooks\\\\train.ipynb'\\)\\); print\\('valid'\\)\")",
-      "Bash(python -c \"import json; nb=json.load\\(open\\('notebooks/train.ipynb','r',encoding='utf-8'\\)\\); [print\\(i, c['id']\\) for i,c in enumerate\\(nb['cells']\\)]\")",
       "Bash(python -c ' *)",
-      "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=tipofmyjoystick&limit=3\")",
-      "Bash(python -m json.tool)",
-      "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=tipofmyjoystick&limit=3&sort=created_utc&sort_type=asc\" -w \"\\\\nHTTP_STATUS:%{http_code}\")",
-      "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=tipofmyjoystick&limit=3&sort=asc&sort_type=created_utc\" -w \"\\\\nHTTP_STATUS:%{http_code}\")",
-      "Bash(python -c \"import nbformat; print\\(nbformat.__version__\\)\")",
-      "Bash(pip install *)",
-      "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=tipofmyjoystick&after=0&before=1777415830&limit=100&sort=asc&sort_type=created_utc\")",
-      "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=tipofmyjoystick&limit=3&sort=asc&sort_type=created_utc\" -w \"\\\\nSTATUS:%{http_code}\")",
-      "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/comments/search?link_id=t3_13f3ye&limit=500&sort=asc&sort_type=created_utc\")",
-      "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/comments/search?link_id=t3_13f3ye&limit=500\")",
-      "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/comments/search?link_id=t3_13f3ye&limit=500&sort=created_utc&sort_type=asc\")",
-      "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/comments/search?link_id=t3_13f3ye&limit=100&sort=asc&sort_type=created_utc\" -w \"\\\\nSTATUS:%{http_code}\")",
-      "Bash(git -C \"c:\\\\Users\\\\Zack\\\\Documents\\\\GitHub\\\\reddibase\" status)"
+      "Bash(python)",
+      "Bash(curl -s \"https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=tipofmyjoystick&limit=1&sort=desc&sort_type=created_utc\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); p=d['data'][0]; print\\(p['created_utc'], __import__\\('datetime'\\).datetime.utcfromtimestamp\\(p['created_utc']\\)\\)\")"
     ]
   }
 }

@@ -14,6 +14,7 @@ async def list_models() -> list[dict]:
             "description": c.get("description", ""),
             "subreddit": c["subreddit"],
             "hf_repo": c["hf_repo"],
+            "classifier_repo": c.get("classifier_repo", ""),
             "confirmed_pairs": c.get("stats", {}).get("confirmed_pairs", 0),
         }
         for c in list_configs()
