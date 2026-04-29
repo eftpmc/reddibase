@@ -70,8 +70,8 @@ export default function ModelPage({ model }: { model: Model }) {
 
         {/* Back + meta row */}
         <div className="flex items-center justify-between mb-8">
-          <Link href="/" className="flex items-center gap-1 text-sm text-base-content/40 hover:text-base-content transition-colors">
-            <ArrowLeft size={14} /> Search
+          <Link href="/models" className="flex items-center gap-1 text-sm text-base-content/40 hover:text-base-content transition-colors">
+            <ArrowLeft size={14} /> Models
           </Link>
           <div className="flex items-center gap-3">
             {stats && (
