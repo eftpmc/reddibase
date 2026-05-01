@@ -133,10 +133,10 @@ class IdentificationModel:
 def _canonical_answer(pair: ConfirmedPair) -> str:
     """
     The best available canonical answer key for grouping pairs by game.
-    Flair text is preferred because it's the explicit game name; the comment
-    body is a fallback and noisier (may contain prose around the game name).
+    Weak answer text is preferred when available because it is the adapter's
+    canonical answer signal; answer text is the fallback.
     """
-    return (pair.flair or pair.answer).strip().lower()
+    return (pair.weak_answer or pair.flair or pair.answer).strip().lower()
 
 
 def _build_training_examples(pairs: list[ConfirmedPair]) -> list:
@@ -211,5 +211,16 @@ def _load_pairs(path: str) -> list[ConfirmedPair]:
     pairs = []
     with open(path, encoding="utf-8") as f:
         for line in f:
-            pairs.append(ConfirmedPair(**json.loads(line)))
+            raw = json.loads(line)
+            if "thread_id" not in raw:
+                raw = {
+                    **raw,
+                    "thread_id": raw.get("post_id", ""),
+                    "source": raw.get("source") or "reddit",
+                    "source_id": raw.get("post_id", ""),
+                    "community": raw.get("subreddit"),
+                    "answer_message_id": raw.get("answer_comment_id", ""),
+                    "weak_answer": raw.get("flair"),
+                }
+            pairs.append(ConfirmedPair(**raw))
     return pairs

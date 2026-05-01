@@ -11,13 +11,12 @@ Usage:
 """
 
 import argparse
-import json
 from pathlib import Path
 
 import yaml
 
 from framework.embedder import IdentificationModel
-from framework.schema import ConfirmedPair
+from framework.embedder import _load_pairs
 
 
 def parse_args() -> argparse.Namespace:
@@ -49,12 +48,9 @@ def main() -> None:
         )
 
     print(f"Loading confirmed pairs from {pairs_path}")
-    pairs: list[ConfirmedPair] = []
-    with open(pairs_path, encoding="utf-8") as f:
-        for line in f:
-            pairs.append(ConfirmedPair(**json.loads(line)))
+    pairs = _load_pairs(pairs_path)
 
-    unique_answers = len({(p.flair or p.answer).lower() for p in pairs})
+    unique_answers = len({(p.weak_answer or p.answer).lower() for p in pairs})
     print(f"Pairs: {len(pairs):,} | unique answers: {unique_answers:,}")
 
     if unique_answers < 10:

@@ -5,20 +5,20 @@ import Layout from '../components/Layout'
 
 const steps = [
   {
-    title: 'Open the notebook',
-    body: 'Run notebooks/train.ipynb in Google Colab with a T4 GPU. The notebook handles scraping, training, artifact upload, and config generation.',
+    title: 'Create threads',
+    body: 'Use the scrape notebook or CLI to create a source-neutral threads.jsonl artifact from a human-solved community.',
   },
   {
-    title: 'Configure the run',
-    body: 'Enter the subreddit name, Hugging Face repo, and write token. Set a flair strategy only when the subreddit uses special solved flairs.',
+    title: 'Audit the data',
+    body: 'Check message coverage, weak-answer labels, excluded labels, date range, and top answers before spending GPU time.',
   },
   {
-    title: 'Let it build',
-    body: 'The notebook scrapes archived posts, runs classifier inference, trains the identification model, and builds the FAISS search index.',
+    title: 'Extract answers',
+    body: 'Train the resolved-thread classifier, then run it over threads to produce confirmed description-answer pairs.',
   },
   {
-    title: 'Publish artifacts',
-    body: 'Upload encoder weights, index.faiss, and pairs.jsonl to Hugging Face Hub from the notebook.',
+    title: 'Train identifier',
+    body: 'Train the retrieval model from confirmed_pairs.jsonl and build the FAISS search index.',
   },
   {
     title: 'Open a PR',
@@ -43,11 +43,11 @@ export default function ContributePage() {
         <section className="mb-10 grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="rounded-lg border border-base-300 bg-base-200 p-4">
             <h2 className="font-semibold mb-1">You need</h2>
-            <p className="text-sm text-base-content/50 leading-relaxed">Google Colab, Google Drive, and a Hugging Face account with a write token.</p>
+            <p className="text-sm text-base-content/50 leading-relaxed">A Python environment, local or datacenter GPU access, and a Hugging Face account for publishing.</p>
           </div>
           <div className="rounded-lg border border-base-300 bg-base-200 p-4">
             <h2 className="font-semibold mb-1">Good candidates</h2>
-            <p className="text-sm text-base-content/50 leading-relaxed">Subreddits where vague descriptions regularly receive confirmed answers.</p>
+            <p className="text-sm text-base-content/50 leading-relaxed">Communities or archives where vague requests regularly receive confirmed answers.</p>
           </div>
           <div className="rounded-lg border border-base-300 bg-base-200 p-4">
             <h2 className="font-semibold mb-1">End result</h2>
@@ -78,16 +78,16 @@ export default function ContributePage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-xl font-bold tracking-tight mb-1">Ready to start?</h2>
-              <p className="text-sm text-base-content/50">Use the notebook as the model factory, then submit the generated config.</p>
+              <p className="text-sm text-base-content/50">Use the split notebooks or CLI pipeline, then submit the generated config.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <a
-                href="https://github.com/eftpmc/reddibase/blob/main/notebooks/train.ipynb"
+                href="https://github.com/eftpmc/reddibase/tree/main/notebooks"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-primary btn-sm gap-2"
               >
-                Notebook <ExternalLink size={13} />
+                Notebooks <ExternalLink size={13} />
               </a>
               <a
                 href="https://github.com/eftpmc/reddibase"

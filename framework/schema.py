@@ -3,41 +3,59 @@ from typing import Optional
 
 
 @dataclass
-class Comment:
+class Message:
+    """A source-neutral reply/message inside a human-solved thread."""
+
     id: str
-    post_id: str
-    author: str
+    source_id: str
+    author_id: Optional[str]
     body: str
-    score: int
     created_utc: int
-    parent_id: str  # either post fullname (t3_xxx) or parent comment fullname (t1_xxx)
-    is_op_reply: bool = False  # True if OP replied to this comment's parent thread
+    parent_id: Optional[str] = None
+    score: float = 0
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass
-class Post:
+class Thread:
+    """A source-neutral discussion thread that may contain a resolved answer."""
+
     id: str
-    subreddit: str
+    source: str
+    source_id: str
+    community: Optional[str]
     title: str
     body: str
-    author: str
-    score: int
+    author_id: Optional[str]
     created_utc: int
-    flair: Optional[str]
-    url: str
-    comments: list[Comment] = field(default_factory=list)
+    url: str = ""
+    score: float = 0
+    weak_answer: Optional[str] = None
+    weak_status: Optional[str] = None
+    messages: list[Message] = field(default_factory=list)
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass
 class ConfirmedPair:
-    """A confirmed (description → answer) pair extracted from a solved post."""
-    post_id: str
-    subreddit: str
-    description: str         # post title + body
-    answer: str              # winning comment body
-    answer_comment_id: str
-    confidence: float        # classifier confidence score
-    flair: Optional[str] = None  # original post flair when present (canonical answer for tipofmyjoystick = game name)
+    """A confirmed (description -> answer) pair extracted from a solved thread."""
+
+    thread_id: str
+    source: str
+    source_id: str
+    community: Optional[str]
+    description: str
+    answer: str
+    answer_message_id: str
+    confidence: float
+    weak_answer: Optional[str] = None
+    created_utc: int = 0
     platform: Optional[str] = None
     year: Optional[int] = None
-    created_utc: int = 0
+
+    # Temporary aliases for current API/UI artifact compatibility. New pipeline
+    # code should prefer thread_id/source_id/community/weak_answer.
+    post_id: Optional[str] = None
+    subreddit: Optional[str] = None
+    answer_comment_id: Optional[str] = None
+    flair: Optional[str] = None
