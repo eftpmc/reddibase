@@ -195,44 +195,71 @@ class ResolvedThreadClassifier:
         self.model_path = model_path
         self._tokenizer = None
         self._model = None
+        self._device = None
 
     def load(self) -> "ResolvedThreadClassifier":
+        import torch
         from transformers import DistilBertForSequenceClassification, DistilBertTokenizerFast
 
         self._tokenizer = DistilBertTokenizerFast.from_pretrained(self.model_path)
         self._model = DistilBertForSequenceClassification.from_pretrained(self.model_path)
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._model.to(self._device)
         self._model.eval()
         return self
 
     def predict(self, thread: Thread) -> tuple[bool, Optional[Message], float]:
+        return self.predict_batch([thread])[0]
+
+    def predict_batch(
+        self,
+        threads: list[Thread],
+        batch_size: int = 256,
+    ) -> list[tuple[bool, Optional[Message], float]]:
         import torch
 
-        mark_author_replies(thread)
-        pairs = self._build_candidate_pairs(thread)
-        if not pairs:
-            return False, None, 0.0
+        assert self._model and self._tokenizer, "Call load() first"
 
-        texts = [text for _, text in pairs]
-        inputs = self._tokenizer(
-            texts,
-            truncation=True,
-            max_length=self.MAX_LENGTH,
-            padding=True,
-            return_tensors="pt",
-        )
+        flat_texts = []
+        flat_messages = []
+        flat_thread_indices = []
 
+        for thread_idx, thread in enumerate(threads):
+            mark_author_replies(thread)
+            pairs = self._build_candidate_pairs(thread)
+            for message, text in pairs:
+                flat_texts.append(text)
+                flat_messages.append(message)
+                flat_thread_indices.append(thread_idx)
+
+        if not flat_texts:
+            return [(False, None, 0.0) for _ in threads]
+
+        scores = []
         with torch.no_grad():
-            logits = self._model(**inputs).logits
-            probs = torch.softmax(logits, dim=-1)[:, 1]
+            for start in range(0, len(flat_texts), batch_size):
+                texts = flat_texts[start : start + batch_size]
+                inputs = self._tokenizer(
+                    texts,
+                    truncation=True,
+                    max_length=self.MAX_LENGTH,
+                    padding=True,
+                    return_tensors="pt",
+                )
+                inputs = {key: value.to(self._device) for key, value in inputs.items()}
+                logits = self._model(**inputs).logits
+                probs = torch.softmax(logits, dim=-1)[:, 1]
+                scores.extend(probs.detach().cpu().tolist())
 
-        best_idx = int(probs.argmax())
-        confidence = float(probs[best_idx])
-        answer = pairs[best_idx][0]
+        best_by_thread: list[tuple[Optional[Message], float]] = [(None, 0.0) for _ in threads]
+        for thread_idx, message, score in zip(flat_thread_indices, flat_messages, scores):
+            if score > best_by_thread[thread_idx][1]:
+                best_by_thread[thread_idx] = (message, float(score))
 
-        return confidence > 0.5, answer, confidence
-
-    def predict_batch(self, threads: list[Thread]) -> list[tuple[bool, Optional[Message], float]]:
-        return [self.predict(thread) for thread in threads]
+        return [
+            (confidence > 0.5, answer, confidence)
+            for answer, confidence in best_by_thread
+        ]
 
     def to_confirmed_pair(
         self, thread: Thread, answer: Message, confidence: float
@@ -275,15 +302,26 @@ class ResolvedThreadClassifier:
         num_epochs: int = 3,
         batch_size: int = 8,
         gradient_accumulation_steps: int = 2,
+        dataloader_num_workers: int = 4,
+        use_bf16: Optional[bool] = None,
+        use_tf32: bool = True,
     ) -> "ResolvedThreadClassifier":
         import torch
         from datasets import Dataset
         from transformers import (
+            DataCollatorWithPadding,
             DistilBertForSequenceClassification,
             DistilBertTokenizerFast,
             Trainer,
             TrainingArguments,
         )
+
+        if use_tf32 and torch.cuda.is_available():
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+
+        if use_bf16 is None:
+            use_bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
 
         tokenizer = DistilBertTokenizerFast.from_pretrained(base_model)
         model = DistilBertForSequenceClassification.from_pretrained(base_model, num_labels=2)
@@ -301,7 +339,6 @@ class ResolvedThreadClassifier:
                 batch["text"],
                 truncation=True,
                 max_length=cls.MAX_LENGTH,
-                padding="max_length",
             )
 
         ds = ds.map(tokenize, batched=True, remove_columns=["text"])
@@ -318,7 +355,12 @@ class ResolvedThreadClassifier:
             load_best_model_at_end=True,
             metric_for_best_model="eval_loss",
             logging_steps=50,
-            fp16=torch.cuda.is_available(),
+            bf16=use_bf16,
+            fp16=torch.cuda.is_available() and not use_bf16,
+            tf32=use_tf32 and torch.cuda.is_available(),
+            dataloader_num_workers=dataloader_num_workers,
+            dataloader_pin_memory=torch.cuda.is_available(),
+            group_by_length=True,
             report_to="none",
         )
 
@@ -327,6 +369,7 @@ class ResolvedThreadClassifier:
             args=training_args,
             train_dataset=split["train"],
             eval_dataset=split["test"],
+            data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
         )
         trainer.train()
 

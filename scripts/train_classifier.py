@@ -24,6 +24,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--epochs", type=int, default=3)
     p.add_argument("--batch-size", type=int, default=8)
     p.add_argument("--grad-accum", type=int, default=2)
+    p.add_argument("--num-workers", type=int, default=4, help="DataLoader worker processes")
+    p.add_argument("--no-bf16", action="store_true", help="Disable bf16 training on supported GPUs")
+    p.add_argument("--no-tf32", action="store_true", help="Disable TF32 matmul on NVIDIA Ampere+ GPUs")
     p.add_argument("--limit", type=int, default=None, help="Only read the first N threads")
     p.add_argument(
         "--exclude-weak-answer",
@@ -91,6 +94,9 @@ def main() -> None:
         num_epochs=args.epochs,
         batch_size=args.batch_size,
         gradient_accumulation_steps=args.grad_accum,
+        dataloader_num_workers=args.num_workers,
+        use_bf16=False if args.no_bf16 else None,
+        use_tf32=not args.no_tf32,
     )
     print(f"\nClassifier saved to {output}")
 

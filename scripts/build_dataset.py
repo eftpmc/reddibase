@@ -25,6 +25,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--classifier", help="Override classifier weights directory")
     p.add_argument("--threshold", type=float, default=None)
     p.add_argument("--limit", type=int, default=None, help="Only process the first N threads")
+    p.add_argument("--thread-batch-size", type=int, default=128, help="Threads to score per classifier call")
+    p.add_argument("--candidate-batch-size", type=int, default=512, help="Candidate messages per GPU/CPU batch")
     return p.parse_args()
 
 
@@ -53,21 +55,34 @@ def main() -> None:
     below_threshold = 0
 
     with output_path.open("w", encoding="utf-8", newline="\n") as f:
+        batch = []
+
+        def flush_batch() -> None:
+            nonlocal confirmed, below_threshold
+            if not batch:
+                return
+            predictions = clf.predict_batch(batch, batch_size=args.candidate_batch_size)
+            for thread, (is_solved, answer, confidence) in zip(batch, predictions):
+                if is_solved and answer and confidence >= threshold:
+                    pair = clf.to_confirmed_pair(thread, answer, confidence)
+                    f.write(json.dumps(dataclasses.asdict(pair), ensure_ascii=False) + "\n")
+                    confirmed += 1
+                else:
+                    below_threshold += 1
+            batch.clear()
+
         for thread in iter_threads_jsonl(threads_path):
             if args.limit and processed >= args.limit:
                 break
             if processed % 1000 == 0:
                 print(f"  {processed:,} processed, {confirmed:,} confirmed...")
 
-            is_solved, answer, confidence = clf.predict(thread)
-            if is_solved and answer and confidence >= threshold:
-                pair = clf.to_confirmed_pair(thread, answer, confidence)
-                f.write(json.dumps(dataclasses.asdict(pair), ensure_ascii=False) + "\n")
-                confirmed += 1
-            else:
-                below_threshold += 1
-
+            batch.append(thread)
             processed += 1
+            if len(batch) >= args.thread_batch_size:
+                flush_batch()
+
+        flush_batch()
 
     print(f"\nProcessed: {processed:,}")
     print(f"Confirmed: {confirmed:,}")
