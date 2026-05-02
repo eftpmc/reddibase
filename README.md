@@ -74,6 +74,12 @@ Train the identification model and FAISS index:
 python -m scripts.train_embedder tipofmyjoystick
 ```
 
+Evaluate identifier retrieval before publishing:
+
+```bash
+python -m scripts.evaluate_identifier tipofmyjoystick --sample-size 5000 --top-k 10
+```
+
 The same flow is available as small local workflow notebooks:
 
 ```text
@@ -127,6 +133,7 @@ scripts/
   build_dataset.py     Extract confirmed pairs from threads
   canonicalize_pairs.py  Add canonical answer fields to existing pairs
   train_embedder.py    Train identifier + build FAISS
+  evaluate_identifier.py  Measure same-answer retrieval quality
 
 models/
   tipofmyjoystick/
