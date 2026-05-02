@@ -86,6 +86,7 @@ The same flow is available as small local workflow notebooks:
 notebooks/scrape.ipynb
 notebooks/classifier.ipynb
 notebooks/identifier.ipynb
+notebooks/evaluate.ipynb
 ```
 
 ## Searching

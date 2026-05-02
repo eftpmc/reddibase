@@ -18,6 +18,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--pairs", help="Path to confirmed_pairs.jsonl or exported pairs.jsonl")
     p.add_argument("--model-path", help="Identifier model directory")
     p.add_argument("--index-path", help="Identifier index/pairs directory")
+    p.add_argument("--hf-repo", help="Evaluate a Hugging Face identifier repo")
+    p.add_argument("--cache-dir", help="Directory for downloaded Hugging Face artifacts")
     p.add_argument("--sample-size", type=int, default=5000)
     p.add_argument("--top-k", type=int, default=10)
     p.add_argument("--seed", type=int, default=42)
@@ -29,9 +31,20 @@ def main() -> None:
     args = parse_args()
     from framework.embedder import IdentificationModel, _canonical_answer, _load_pairs
 
-    pairs_path = Path(args.pairs or f"models/{args.model}/identification_model/pairs.jsonl")
-    model_path = args.model_path or f"models/{args.model}/identification_model"
-    index_path = args.index_path or model_path
+    if args.hf_repo:
+        from huggingface_hub import hf_hub_download
+
+        cache_dir = Path(args.cache_dir or f".cache/reddibase/{args.model}")
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        hf_hub_download(repo_id=args.hf_repo, filename="index.faiss", local_dir=str(cache_dir))
+        hf_hub_download(repo_id=args.hf_repo, filename="pairs.jsonl", local_dir=str(cache_dir))
+        pairs_path = Path(args.pairs or cache_dir / "pairs.jsonl")
+        model_path = args.model_path or args.hf_repo
+        index_path = args.index_path or str(cache_dir)
+    else:
+        pairs_path = Path(args.pairs or f"models/{args.model}/identification_model/pairs.jsonl")
+        model_path = args.model_path or f"models/{args.model}/identification_model"
+        index_path = args.index_path or model_path
 
     if not pairs_path.exists():
         raise SystemExit(f"Pairs file not found: {pairs_path}")
