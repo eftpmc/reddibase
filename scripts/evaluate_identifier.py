@@ -80,11 +80,14 @@ def main() -> None:
         query_pair = pairs[idx]
         expected = _canonical_answer(query_pair)
         results = model.search(query_pair.description, top_k=args.top_k + 1)
+        non_self_results = [
+            (candidate, score)
+            for candidate, score in results
+            if candidate.source_id != query_pair.source_id
+        ][: args.top_k]
 
         rank = None
-        for result_rank, (candidate, _score) in enumerate(results, start=1):
-            if candidate.source_id == query_pair.source_id:
-                continue
+        for result_rank, (candidate, _score) in enumerate(non_self_results, start=1):
             if _canonical_answer(candidate) == expected:
                 rank = result_rank
                 break
@@ -99,7 +102,7 @@ def main() -> None:
             reciprocal_ranks.append(0.0)
             by_answer_hits[expected].append(0)
             if len(misses) < 10:
-                misses.append((query_pair, results[: min(args.top_k, len(results))]))
+                misses.append((query_pair, non_self_results))
 
         if n % 500 == 0:
             print(f"  evaluated {n:,}/{len(sample_indices):,}...")
