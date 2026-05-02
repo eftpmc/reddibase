@@ -2,7 +2,7 @@
 Scrape a Reddit source into source-neutral threads.jsonl.
 
 Usage:
-    python -m scripts.scrape_threads tipofmyjoystick --output data/converted/tipofmyjoystick/threads.jsonl
+    python -m scripts.scrape_threads tipofmyjoystick --output data/tipofmyjoystick/threads.jsonl
 """
 
 import argparse

@@ -3,7 +3,7 @@ Audit a source-neutral threads.jsonl artifact before training.
 
 Usage:
     python -m scripts.audit_threads tipofmyjoystick
-    python -m scripts.audit_threads tipofmyjoystick --threads data/converted/tipofmyjoystick/threads.jsonl
+    python -m scripts.audit_threads tipofmyjoystick --threads data/tipofmyjoystick/threads.jsonl
 """
 
 import argparse
@@ -48,7 +48,7 @@ def _iso(ts: int | None) -> str | None:
 
 def main() -> None:
     args = parse_args()
-    threads_path = Path(args.threads or f"data/converted/{args.model}/threads.jsonl")
+    threads_path = Path(args.threads or f"data/{args.model}/threads.jsonl")
     if not threads_path.exists():
         raise SystemExit(f"Threads file not found: {threads_path}")
 

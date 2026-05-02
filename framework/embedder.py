@@ -133,10 +133,10 @@ class IdentificationModel:
 def _canonical_answer(pair: ConfirmedPair) -> str:
     """
     The best available canonical answer key for grouping pairs by game.
-    Weak answer text is preferred when available because it is the adapter's
-    canonical answer signal; answer text is the fallback.
+    Newer pair artifacts store canonical_answer directly. Older artifacts fall
+    back to answer, then weak/flair text for compatibility.
     """
-    return (pair.weak_answer or pair.flair or pair.answer).strip().lower()
+    return (pair.canonical_answer or pair.answer or pair.weak_answer or pair.flair).strip().lower()
 
 
 def _build_training_examples(pairs: list[ConfirmedPair]) -> list:

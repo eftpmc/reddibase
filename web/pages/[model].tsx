@@ -56,6 +56,7 @@ function formatDate(ts: number) {
 }
 
 function displayAnswer(flair: string | null, answer: string): string {
+  if (answer) return answer
   if (flair) return flair
   const first = answer.split(/[\n.!?]/)[0].trim()
   return first.length > 72 ? first.slice(0, 72) + '…' : first

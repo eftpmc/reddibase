@@ -3,7 +3,7 @@ Run the resolved-thread classifier over threads and emit confirmed pairs.
 
 Usage:
     python -m scripts.build_dataset tipofmyjoystick
-    python -m scripts.build_dataset tipofmyjoystick --threads data/converted/tipofmyjoystick/threads.jsonl
+    python -m scripts.build_dataset tipofmyjoystick --threads data/tipofmyjoystick/threads.jsonl
 """
 
 import argparse
@@ -27,6 +27,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--limit", type=int, default=None, help="Only process the first N threads")
     p.add_argument("--thread-batch-size", type=int, default=128, help="Threads to score per classifier call")
     p.add_argument("--candidate-batch-size", type=int, default=512, help="Candidate messages per GPU/CPU batch")
+    p.add_argument("--max-length", type=int, default=None, help="Classifier token length for extraction")
+    p.add_argument(
+        "--amp-dtype",
+        choices=["auto", "bf16", "fp16", "none"],
+        default="auto",
+        help="Mixed-precision dtype for CUDA classifier inference",
+    )
     return p.parse_args()
 
 
@@ -38,7 +45,7 @@ def main() -> None:
         raise SystemExit(f"Config not found: {config_path}")
     config = yaml.safe_load(config_path.read_text())
 
-    threads_path = Path(args.threads or f"data/converted/{args.model}/threads.jsonl")
+    threads_path = Path(args.threads or f"data/{args.model}/threads.jsonl")
     if not threads_path.exists():
         raise SystemExit(f"Threads file not found: {threads_path}")
 
@@ -61,7 +68,12 @@ def main() -> None:
             nonlocal confirmed, below_threshold
             if not batch:
                 return
-            predictions = clf.predict_batch(batch, batch_size=args.candidate_batch_size)
+            predictions = clf.predict_batch(
+                batch,
+                batch_size=args.candidate_batch_size,
+                max_length=args.max_length,
+                amp_dtype=args.amp_dtype,
+            )
             for thread, (is_solved, answer, confidence) in zip(batch, predictions):
                 if is_solved and answer and confidence >= threshold:
                     pair = clf.to_confirmed_pair(thread, answer, confidence)

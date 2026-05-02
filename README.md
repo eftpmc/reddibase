@@ -22,7 +22,7 @@ The pipeline is:
 ```text
 source adapter -> threads.jsonl
 threads.jsonl -> resolved-thread classifier
-threads.jsonl + classifier -> confirmed_pairs.jsonl
+threads.jsonl + classifier + solution extractor -> confirmed_pairs.jsonl
 confirmed_pairs.jsonl -> SentenceTransformer + FAISS index
 ```
 
@@ -38,28 +38,34 @@ Scrape Reddit/Arctic Shift directly into source-neutral threads:
 
 ```bash
 python -m scripts.scrape_threads tipofmyjoystick \
-  --output data/converted/tipofmyjoystick/threads.jsonl
+  --output data/tipofmyjoystick/threads.jsonl
 ```
 
 Audit the thread artifact before training:
 
 ```bash
 python -m scripts.audit_threads tipofmyjoystick \
-  --threads data/converted/tipofmyjoystick/threads.jsonl
+  --threads data/tipofmyjoystick/threads.jsonl
 ```
 
 Train the resolved-thread classifier:
 
 ```bash
 python -m scripts.train_classifier tipofmyjoystick \
-  --threads data/converted/tipofmyjoystick/threads.jsonl
+  --threads data/tipofmyjoystick/threads.jsonl
 ```
 
 Extract confirmed answer pairs:
 
 ```bash
 python -m scripts.build_dataset tipofmyjoystick \
-  --threads data/converted/tipofmyjoystick/threads.jsonl
+  --threads data/tipofmyjoystick/threads.jsonl
+```
+
+Upgrade an older pair artifact with canonical answers:
+
+```bash
+python -m scripts.canonicalize_pairs models/tipofmyjoystick/confirmed_pairs.jsonl
 ```
 
 Train the identification model and FAISS index:
@@ -71,9 +77,9 @@ python -m scripts.train_embedder tipofmyjoystick
 The same flow is available as small local workflow notebooks:
 
 ```text
-notebooks/scrape_threads.ipynb
-notebooks/train_classifier_extract_pairs.ipynb
-notebooks/train_identifier.ipynb
+notebooks/scrape.ipynb
+notebooks/classifier.ipynb
+notebooks/identifier.ipynb
 ```
 
 ## Searching
@@ -111,6 +117,7 @@ framework/
   threads.py     JSONL read/write helpers for Thread artifacts
   scraper.py     Reddit/Arctic Shift adapter that streams Thread objects
   classifier.py  Resolved-thread classifier training + inference
+  solution.py    Canonical answer extraction from selected solution comments
   embedder.py    Identification model + FAISS index
 
 scripts/
@@ -118,6 +125,7 @@ scripts/
   audit_threads.py     Audit weak-answer and message coverage before training
   train_classifier.py  Train resolved-thread classifier
   build_dataset.py     Extract confirmed pairs from threads
+  canonicalize_pairs.py  Add canonical answer fields to existing pairs
   train_embedder.py    Train identifier + build FAISS
 
 models/

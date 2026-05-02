@@ -19,4 +19,4 @@ identification_model:
   top_k: 10
 
 stats:
-  confirmed_pairs: 1325
+  confirmed_pairs: 174094

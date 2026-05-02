@@ -3,7 +3,7 @@ Train the resolved-thread classifier from source-neutral threads.
 
 Usage:
     python -m scripts.train_classifier tipofmyjoystick
-    python -m scripts.train_classifier tipofmyjoystick --threads data/converted/tipofmyjoystick/threads.jsonl
+    python -m scripts.train_classifier tipofmyjoystick --threads data/tipofmyjoystick/threads.jsonl
 """
 
 import argparse
@@ -50,7 +50,7 @@ def main() -> None:
         raise SystemExit(f"Config not found: {config_path}")
     config = yaml.safe_load(config_path.read_text())
 
-    threads_path = Path(args.threads or f"data/converted/{args.model}/threads.jsonl")
+    threads_path = Path(args.threads or f"data/{args.model}/threads.jsonl")
     if not threads_path.exists():
         raise SystemExit(f"Threads file not found: {threads_path}")
 

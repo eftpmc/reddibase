@@ -7,12 +7,14 @@ flairs, accepted-answer markers, or other source-specific resolution signals.
 """
 
 import random
+from contextlib import nullcontext
 from dataclasses import dataclass
 from typing import Optional
 
 from rapidfuzz import fuzz
 
 from framework.schema import ConfirmedPair, Message, Thread
+from framework.solution import extract_solution
 
 DELETED_AUTHORS = {"[deleted]", "AutoModerator", ""}
 DELETED_BODIES = {"[deleted]", "[removed]", ""}
@@ -215,10 +217,24 @@ class ResolvedThreadClassifier:
         self,
         threads: list[Thread],
         batch_size: int = 256,
+        max_length: Optional[int] = None,
+        amp_dtype: str = "auto",
     ) -> list[tuple[bool, Optional[Message], float]]:
         import torch
 
         assert self._model and self._tokenizer, "Call load() first"
+        max_length = max_length or self.MAX_LENGTH
+
+        def autocast_dtype():
+            if self._device.type != "cuda" or amp_dtype == "none":
+                return None
+            if amp_dtype == "bf16" or (
+                amp_dtype == "auto" and torch.cuda.is_bf16_supported()
+            ):
+                return torch.bfloat16
+            if amp_dtype in {"auto", "fp16"}:
+                return torch.float16
+            raise ValueError("amp_dtype must be one of: auto, bf16, fp16, none")
 
         flat_texts = []
         flat_messages = []
@@ -226,7 +242,7 @@ class ResolvedThreadClassifier:
 
         for thread_idx, thread in enumerate(threads):
             mark_author_replies(thread)
-            pairs = self._build_candidate_pairs(thread)
+            pairs = self._build_candidate_pairs(thread, max_length=max_length)
             for message, text in pairs:
                 flat_texts.append(text)
                 flat_messages.append(message)
@@ -236,18 +252,30 @@ class ResolvedThreadClassifier:
             return [(False, None, 0.0) for _ in threads]
 
         scores = []
-        with torch.no_grad():
+        dtype = autocast_dtype()
+
+        with torch.inference_mode():
             for start in range(0, len(flat_texts), batch_size):
                 texts = flat_texts[start : start + batch_size]
                 inputs = self._tokenizer(
                     texts,
                     truncation=True,
-                    max_length=self.MAX_LENGTH,
+                    max_length=max_length,
                     padding=True,
+                    pad_to_multiple_of=8 if self._device.type == "cuda" else None,
                     return_tensors="pt",
                 )
-                inputs = {key: value.to(self._device) for key, value in inputs.items()}
-                logits = self._model(**inputs).logits
+                inputs = {
+                    key: value.to(self._device, non_blocking=True)
+                    for key, value in inputs.items()
+                }
+                autocast = (
+                    torch.autocast(device_type="cuda", dtype=dtype)
+                    if dtype is not None
+                    else nullcontext()
+                )
+                with autocast:
+                    logits = self._model(**inputs).logits
                 probs = torch.softmax(logits, dim=-1)[:, 1]
                 scores.extend(probs.detach().cpu().tolist())
 
@@ -264,16 +292,20 @@ class ResolvedThreadClassifier:
     def to_confirmed_pair(
         self, thread: Thread, answer: Message, confidence: float
     ) -> ConfirmedPair:
+        solution = extract_solution(answer.body, thread.weak_answer)
         return ConfirmedPair(
             thread_id=thread.id,
             source=thread.source,
             source_id=thread.source_id,
             community=thread.community,
             description=f"{thread.title}\n\n{thread.body}".strip(),
-            answer=answer.body,
+            answer=solution.answer,
             answer_message_id=answer.id,
             confidence=confidence,
             weak_answer=thread.weak_answer,
+            canonical_answer=solution.answer,
+            answer_message_text=answer.body,
+            answer_extraction_method=solution.method,
             created_utc=thread.created_utc,
             post_id=thread.source_id,
             subreddit=thread.community,
@@ -281,7 +313,11 @@ class ResolvedThreadClassifier:
             flair=thread.weak_answer,
         )
 
-    def _build_candidate_pairs(self, thread: Thread) -> list[tuple[Message, str]]:
+    def _build_candidate_pairs(
+        self,
+        thread: Thread,
+        max_length: int = MAX_LENGTH,
+    ) -> list[tuple[Message, str]]:
         pairs = []
         for message in thread.messages:
             if not is_answer_candidate(thread, message):
@@ -289,7 +325,7 @@ class ResolvedThreadClassifier:
             author_reply = get_author_reply(thread, message)
             pairs.append((
                 message,
-                format_classifier_input(thread, message, author_reply, self.MAX_LENGTH),
+                format_classifier_input(thread, message, author_reply, max_length),
             ))
         return pairs
 

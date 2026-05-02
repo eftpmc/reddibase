@@ -9,7 +9,18 @@ from api.model_loader import get_model
 
 router = APIRouter()
 
-_FIELDS = ["post_id", "subreddit", "description", "answer", "flair", "confidence", "created_utc"]
+_FIELDS = [
+    "post_id",
+    "subreddit",
+    "description",
+    "answer",
+    "flair",
+    "confidence",
+    "created_utc",
+    "canonical_answer",
+    "answer_message_text",
+    "answer_extraction_method",
+]
 
 
 def _pair_dict(p):
@@ -26,7 +37,7 @@ async def get_stats(model_id: str) -> dict:
     dates = [p.created_utc for p in pairs if p.created_utc]
     answer_counts: dict[str, int] = {}
     for p in pairs:
-        key = (p.flair or p.answer or "").strip()
+        key = (p.canonical_answer or p.answer or "").strip()
         if key:
             answer_counts[key] = answer_counts.get(key, 0) + 1
 

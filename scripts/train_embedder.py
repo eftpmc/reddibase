@@ -50,7 +50,9 @@ def main() -> None:
     print(f"Loading confirmed pairs from {pairs_path}")
     pairs = _load_pairs(pairs_path)
 
-    unique_answers = len({(p.weak_answer or p.answer).lower() for p in pairs})
+    unique_answers = len(
+        {(p.canonical_answer or p.answer or p.weak_answer or "").lower() for p in pairs}
+    )
     print(f"Pairs: {len(pairs):,} | unique answers: {unique_answers:,}")
 
     if unique_answers < 10:

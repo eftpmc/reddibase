@@ -49,6 +49,9 @@ class ConfirmedPair:
     answer_message_id: str
     confidence: float
     weak_answer: Optional[str] = None
+    canonical_answer: Optional[str] = None
+    answer_message_text: Optional[str] = None
+    answer_extraction_method: Optional[str] = None
     created_utc: int = 0
     platform: Optional[str] = None
     year: Optional[int] = None
